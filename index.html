@@ -7,8 +7,89 @@
     <meta name="description" content="Synthrace - An aesthetic, lag-free online lo-fi highway cruising experience with freely available chill beats, flying celestial animals, and changing sceneries." />
     <title>Synthrace · Lo-Fi Highway Cruise</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>" />
+
+    <!-- Inline boot screen styles: self-contained so the splash renders even if the CSS bundle fails -->
+    <style>
+      #boot-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(ellipse at center, #131226 0%, #0a0b10 70%);
+        color: #c4b5fd;
+        font-family: 'Courier New', ui-monospace, monospace;
+        text-align: center;
+        transition: opacity 0.6s ease;
+      }
+      #boot-screen.boot-done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-logo {
+        font-size: 1.4rem;
+        letter-spacing: 0.5em;
+        margin-bottom: 1rem;
+        color: #e9d5ff;
+        text-shadow: 0 0 18px rgba(168, 85, 247, 0.8);
+      }
+      .boot-status {
+        font-size: 0.85rem;
+        letter-spacing: 0.15em;
+        opacity: 0.75;
+        animation: boot-pulse 1.6s ease-in-out infinite;
+      }
+      .boot-status.boot-error {
+        animation: none;
+        color: #fda4af;
+        opacity: 1;
+        max-width: 34rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      @keyframes boot-pulse {
+        0%, 100% { opacity: 0.35; }
+        50% { opacity: 0.85; }
+      }
+    </style>
+
+    <!-- Boot failure surface: turns a silent black screen into a readable error -->
+    <script>
+      (function () {
+        window.__bootError = function (msg) {
+          var el = document.getElementById('boot-status');
+          if (!el) return;
+          el.classList.add('boot-error');
+          el.textContent = '⚠ failed to start the engine\n' + msg + '\n\ntry a hard refresh (Ctrl/Cmd+Shift+R)';
+        };
+        window.addEventListener('error', function (e) {
+          var msg = e && e.message
+            ? e.message
+            : (e && e.target && (e.target.src || e.target.href)
+                ? 'failed to load: ' + (e.target.src || e.target.href)
+                : 'unknown error');
+          window.__bootError(msg);
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          var reason = e && e.reason;
+          window.__bootError(reason && reason.message ? reason.message : String(reason));
+        });
+      })();
+    </script>
   </head>
   <body>
+    <div id="boot-screen">
+      <div class="boot-inner">
+        <div class="boot-logo">✦ SYNTHRACE ✦</div>
+        <div class="boot-status" id="boot-status">warming up the midnight highway…</div>
+      </div>
+    </div>
+    <noscript>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0b10;color:#e9d5ff;font-family:monospace;text-align:center;padding:2rem;">
+        Synthrace needs JavaScript to cruise the midnight highway. Please enable JavaScript and reload.
+      </div>
+    </noscript>
     <div id="canvas-container"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
