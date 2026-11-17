@@ -1,0 +1,51 @@
+[
+  {
+    "id": "coastal-road",
+    "title": "Coastal Road",
+    "artist": "Mellow Fox",
+    "file": "/music/coastal-road.mp3",
+    "vibe": "Midnight Breeze"
+  },
+  {
+    "id": "nightvision",
+    "title": "Nightvision",
+    "artist": "Sellar",
+    "file": "/music/nightvision.mp3",
+    "vibe": "Neon Glow"
+  },
+  {
+    "id": "this-is-easy",
+    "title": "This Is Easy",
+    "artist": "Red Tractor",
+    "file": "/music/this-is-easy.mp3",
+    "vibe": "Rainy Drive"
+  },
+  {
+    "id": "peaceful-retreat",
+    "title": "Peaceful Retreat",
+    "artist": "Mellow Fox",
+    "file": "/music/peaceful-retreat.mp3",
+    "vibe": "Aurora Mist"
+  },
+  {
+    "id": "new-beginnings",
+    "title": "New Beginnings",
+    "artist": "Mr. Käfer & Phlocalyst",
+    "file": "/music/new-beginnings.mp3",
+    "vibe": "Sakura Bloom"
+  },
+  {
+    "id": "bonsai-tree",
+    "title": "Bonsai Tree",
+    "artist": "Yellofish",
+    "file": "/music/bonsai-tree.mp3",
+    "vibe": "Cosmic Drift"
+  },
+  {
+    "id": "the-extra-mile",
+    "title": "The Extra Mile",
+    "artist": "Robot Age",
+    "file": "/music/the-extra-mile.mp3",
+    "vibe": "Endless Horizon"
+  }
+]
