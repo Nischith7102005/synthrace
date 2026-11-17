@@ -2,6 +2,30 @@
 
 An aesthetic, zero-lag, online 3D highway riding experience designed for chilling, relaxing, and vibing to lo-fi beats with seamless crossfades, dynamic night scenery, and celestial sky animals.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FNischith7102005%2Fsynthrace)
+
+---
+
+## ⚡ 1-Click Deploy to Vercel
+
+This repository is configured for instantaneous deployment on **Vercel** (`vercel.json` included with Vite presets, audio streaming byte-range headers, and asset caching).
+
+### Method 1: Import via Vercel Dashboard (Recommended)
+1. Go to [vercel.com/new](https://vercel.com/new).
+2. Connect your GitHub account and select repository **`Nischith7102005/synthrace`**.
+3. Vercel will automatically detect:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Click **Deploy**. In ~30 seconds, your game will be live on your custom `*.vercel.app` domain!
+
+### Method 2: Deploy via Vercel CLI
+From your local machine:
+```bash
+npm i -g vercel
+vercel
+```
+
 ---
 
 ## ✨ Features
