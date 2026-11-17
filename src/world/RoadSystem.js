@@ -327,7 +327,7 @@ export class RoadSystem {
 
       // Cross beam
       const beamGeo = new THREE.BoxGeometry(span, 0.8, 0.8);
-      beamGeo.position.set(0, height, 0);
+      beamGeo.translate(0, height, 0);
       const crossBeam = new THREE.Mesh(beamGeo, this.trussMat);
       gantryGroup.add(crossBeam);
 

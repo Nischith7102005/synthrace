@@ -30,7 +30,8 @@ export class FlyingCreatures {
     whaleData.forEach((data, index) => {
       const whale = this.createWhaleMesh(data.scale);
       whale.position.set(data.startX, data.startY, data.startZ);
-      whale.userData = {
+      // Merge path data into userData (createWhaleMesh already stored segments/fins there)
+      Object.assign(whale.userData, {
         baseX: data.startX,
         baseY: data.startY,
         baseZ: data.startZ,
@@ -38,7 +39,7 @@ export class FlyingCreatures {
         phase: data.phase,
         index: index,
         swimmingAngle: 0
-      };
+      });
       this.group.add(whale);
       this.whales.push(whale);
     });
@@ -207,14 +208,15 @@ export class FlyingCreatures {
     rayData.forEach((data, index) => {
       const ray = this.createMantaRayMesh(data.scale);
       ray.position.set(data.x, data.y, data.z);
-      ray.userData = {
+      // Merge instead of replace: createMantaRayMesh stored rayMesh/tailLine in userData
+      Object.assign(ray.userData, {
         baseX: data.x,
         baseY: data.y,
         baseZ: data.z,
         speed: data.speed,
         phase: data.phase,
         index
-      };
+      });
       this.group.add(ray);
       this.rays.push(ray);
     });
@@ -346,13 +348,14 @@ export class FlyingCreatures {
     jellyData.forEach(data => {
       const jelly = this.createJellyfishMesh(data.scale);
       jelly.position.set(data.x, data.y, data.z);
-      jelly.userData = {
+      // Merge instead of replace: createJellyfishMesh stored domeMesh/tentacles in userData
+      Object.assign(jelly.userData, {
         baseX: data.x,
         baseY: data.y,
         baseZ: data.z,
         phase: data.phase,
         scale: data.scale
-      };
+      });
       this.group.add(jelly);
       this.jellyfish.push(jelly);
     });
