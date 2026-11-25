@@ -1,5 +1,6 @@
 // Car.js - Stylized 90s Sports Coupe with Smooth Physics, Pop-up Headlights, Neon Underglow, & Soft Respawn
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export class Car {
   constructor(scene, roadSystem, soundManager) {
@@ -78,19 +79,21 @@ export class Car {
     this.group.add(this.carBodyGroup);
 
     // Colors: Retro Japanese Sports Coupe (Twilight Dark Purple-Grey with Teal accents)
-    this.paintMat = new THREE.MeshStandardMaterial({
-      color: 0x221c35,
-      roughness: 0.25,
-      metalness: 0.7,
-      flatShading: true
+    this.paintMat = new THREE.MeshPhysicalMaterial({
+      color: 0x183039,
+      roughness: 0.22,
+      metalness: 0.62,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.16
     });
     this.bodyMaterials.push(this.paintMat);
 
     this.accentMat = new THREE.MeshStandardMaterial({
-      color: 0x06b6d4,
-      emissive: 0x0891b2,
-      emissiveIntensity: 0.3,
-      roughness: 0.3
+      color: 0x6caaa6,
+      emissive: 0x3e8e89,
+      emissiveIntensity: 0.24,
+      roughness: 0.28,
+      metalness: 0.5
     });
     this.bodyMaterials.push(this.accentMat);
 
@@ -109,39 +112,39 @@ export class Car {
     });
 
     // 1. Lower Chassis
-    const chassisGeo = new THREE.BoxGeometry(2.1, 0.45, 4.4);
+    const chassisGeo = new RoundedBoxGeometry(2.1, 0.45, 4.4, 3, 0.075);
     chassisGeo.translate(0, 0.45, 0);
     const chassis = new THREE.Mesh(chassisGeo, this.paintMat);
     this.carBodyGroup.add(chassis);
 
     // 2. Cabin / Greenhouse
-    const cabinGeo = new THREE.BoxGeometry(1.7, 0.55, 2.3);
+    const cabinGeo = new RoundedBoxGeometry(1.7, 0.55, 2.3, 3, 0.11);
     cabinGeo.translate(0, 0.95, -0.2);
     const cabin = new THREE.Mesh(cabinGeo, this.glassMat);
     this.carBodyGroup.add(cabin);
 
     // Roof panel
-    const roofGeo = new THREE.BoxGeometry(1.68, 0.08, 1.8);
+    const roofGeo = new RoundedBoxGeometry(1.68, 0.08, 1.8, 3, 0.035);
     roofGeo.translate(0, 1.25, -0.2);
     const roof = new THREE.Mesh(roofGeo, this.paintMat);
     this.carBodyGroup.add(roof);
 
     // Front Hood Slope
-    const hoodGeo = new THREE.BoxGeometry(1.95, 0.22, 1.3);
+    const hoodGeo = new RoundedBoxGeometry(1.95, 0.22, 1.3, 3, 0.07);
     hoodGeo.translate(0, 0.65, -1.5);
     const hood = new THREE.Mesh(hoodGeo, this.paintMat);
     hood.rotation.x = 0.08;
     this.carBodyGroup.add(hood);
 
     // Rear Hatch Slope
-    const trunkGeo = new THREE.BoxGeometry(1.95, 0.22, 1.1);
+    const trunkGeo = new RoundedBoxGeometry(1.95, 0.22, 1.1, 3, 0.07);
     trunkGeo.translate(0, 0.68, 1.55);
     const trunk = new THREE.Mesh(trunkGeo, this.paintMat);
     trunk.rotation.x = -0.05;
     this.carBodyGroup.add(trunk);
 
     // Rear Aerodynamic Spoiler
-    const wingGeo = new THREE.BoxGeometry(1.9, 0.08, 0.35);
+    const wingGeo = new RoundedBoxGeometry(1.9, 0.08, 0.35, 3, 0.025);
     wingGeo.translate(0, 0.98, 2.05);
     const wing = new THREE.Mesh(wingGeo, this.paintMat);
     this.carBodyGroup.add(wing);
@@ -193,12 +196,12 @@ export class Car {
     this.carBodyGroup.add(rearBar);
 
     // Front & Rear Bumpers
-    const bumperFGeo = new THREE.BoxGeometry(2.05, 0.28, 0.25);
+    const bumperFGeo = new RoundedBoxGeometry(2.05, 0.28, 0.25, 3, 0.055);
     const bumperF = new THREE.Mesh(bumperFGeo, this.blackTrimMat);
     bumperF.position.set(0, 0.3, -2.18);
     this.carBodyGroup.add(bumperF);
 
-    const bumperRGeo = new THREE.BoxGeometry(2.05, 0.28, 0.25);
+    const bumperRGeo = new RoundedBoxGeometry(2.05, 0.28, 0.25, 3, 0.055);
     const bumperR = new THREE.Mesh(bumperRGeo, this.blackTrimMat);
     bumperR.position.set(0, 0.3, 2.18);
     this.carBodyGroup.add(bumperR);
@@ -274,9 +277,9 @@ export class Car {
     coneGeo.translate(0, 0, -17.5);
 
     const beamMat = new THREE.MeshBasicMaterial({
-      color: 0xffedd5,
+      color: 0xdce9dd,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.09,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       depthWrite: false
@@ -292,26 +295,34 @@ export class Car {
     this.carBodyGroup.add(beamR);
     this.headlightBeams.push(beamR);
 
+    // Local headlamps give lane paint and wet asphalt a believable soft falloff.
+    [-0.65, 0.65].forEach(x => {
+      const headlamp = new THREE.PointLight(0xd7e8e1, 64, 48, 2);
+      headlamp.position.set(x, 0.78, -2.05);
+      this.carBodyGroup.add(headlamp);
+    });
+
     // 2. Soft Neon Underglow beneath the chassis
     const underglowCanvas = document.createElement('canvas');
     underglowCanvas.width = 128;
     underglowCanvas.height = 128;
     const uctx = underglowCanvas.getContext('2d');
     const ugrad = uctx.createRadialGradient(64, 64, 15, 64, 64, 60);
-    ugrad.addColorStop(0, 'rgba(168, 85, 247, 0.9)');
-    ugrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.5)');
+    ugrad.addColorStop(0, 'rgba(141, 227, 208, 0.48)');
+    ugrad.addColorStop(0.5, 'rgba(101, 171, 177, 0.3)');
     ugrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     uctx.fillStyle = ugrad;
     uctx.fillRect(0, 0, 128, 128);
 
     const underglowTex = new THREE.CanvasTexture(underglowCanvas);
+    underglowTex.colorSpace = THREE.SRGBColorSpace;
     const underglowGeo = new THREE.PlaneGeometry(3.6, 6.2);
     underglowGeo.rotateX(-Math.PI / 2);
 
     this.underglowMat = new THREE.MeshBasicMaterial({
       map: underglowTex,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.42,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
@@ -342,10 +353,10 @@ export class Car {
 
     pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     this.exhaustParticleMat = new THREE.PointsMaterial({
-      color: 0xa855f7,
-      size: 0.8,
+      color: 0x9bcfc5,
+      size: 0.42,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.36,
       blending: THREE.AdditiveBlending
     });
 

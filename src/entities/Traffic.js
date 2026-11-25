@@ -1,5 +1,6 @@
 // Traffic.js - Ambient Night Cruising Vehicles (Sedans, Vans, Hatchbacks) with Headlights & Taillights
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export class Traffic {
   constructor(scene, roadSystem) {
@@ -17,32 +18,35 @@ export class Traffic {
 
     this.initSharedMaterials();
     this.initVehiclePool();
+    this.vehicleData = this.vehicles.map(vehicle => vehicle.userData);
   }
 
   initSharedMaterials() {
     this.colors = [
-      0x3b82f6, // royal blue
-      0xef4444, // crimson
-      0x10b981, // emerald
-      0xf59e0b, // amber
-      0x8b5cf6, // violet
-      0xe2e8f0, // pearl white
-      0x334155  // slate
+      0x38515b, // deep petrol
+      0x805752, // muted oxblood
+      0x526b63, // sage
+      0x927958, // warm bronze
+      0x6b6680, // dusk violet
+      0xa5aaa2, // soft pearl
+      0x344251  // slate blue
     ];
 
     this.carMaterials = this.colors.map(col =>
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshPhysicalMaterial({
         color: col,
-        roughness: 0.35,
-        metalness: 0.5,
-        flatShading: true
+        roughness: 0.24,
+        metalness: 0.48,
+        clearcoat: 0.72,
+        clearcoatRoughness: 0.2
       })
     );
 
-    this.glassMat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      roughness: 0.1,
-      metalness: 0.8
+    this.glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x17242c,
+      roughness: 0.16,
+      metalness: 0.55,
+      clearcoat: 0.9
     });
 
     this.wheelMat = new THREE.MeshStandardMaterial({
@@ -88,7 +92,7 @@ export class Traffic {
 
     if (type === 1) {
       // Delivery Van (Iconic Japanese Retro Hauler)
-      const vanBodyGeo = new THREE.BoxGeometry(2.1, 1.8, 4.6);
+      const vanBodyGeo = new RoundedBoxGeometry(2.1, 1.8, 4.6, 3, 0.12);
       vanBodyGeo.translate(0, 1.1, 0);
       const vanMesh = new THREE.Mesh(vanBodyGeo, bodyMat);
       vGroup.add(vanMesh);
@@ -101,14 +105,14 @@ export class Traffic {
       vGroup.add(win);
     } else {
       // Sedan or Hatchback
-      const lowerGeo = new THREE.BoxGeometry(2.0, 0.5, 4.2);
+      const lowerGeo = new RoundedBoxGeometry(2.0, 0.5, 4.2, 3, 0.08);
       lowerGeo.translate(0, 0.45, 0);
       const lower = new THREE.Mesh(lowerGeo, bodyMat);
       vGroup.add(lower);
 
       const cabinLength = (type === 0) ? 2.2 : 2.5;
       const cabinZ = (type === 0) ? -0.1 : 0.1;
-      const cabinGeo = new THREE.BoxGeometry(1.65, 0.55, cabinLength);
+      const cabinGeo = new RoundedBoxGeometry(1.65, 0.55, cabinLength, 3, 0.1);
       cabinGeo.translate(0, 0.95, cabinZ);
       const cabin = new THREE.Mesh(cabinGeo, this.glassMat);
       vGroup.add(cabin);
@@ -223,6 +227,6 @@ export class Traffic {
   }
 
   getVehicles() {
-    return this.vehicles.map(v => v.userData);
+    return this.vehicleData;
   }
 }
