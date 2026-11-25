@@ -10,6 +10,7 @@ export class UI {
     this.weather = game.weather;
 
     this.isPaused = false;
+    this.hudTick = 0;
     this.useMph = false;
     this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
@@ -28,20 +29,29 @@ export class UI {
     this.startScreen = document.createElement('div');
     this.startScreen.className = 'start-screen';
     this.startScreen.innerHTML = `
-      <div class="start-card">
-        <div class="lofi-badge">✦ SYNTHRACE · LOFI HIGHWAY ✦</div>
-        <h1 class="start-title">MIDNIGHT CRUISE</h1>
-        <p class="start-subtitle">an infinite night drive for when you just want to chill</p>
-        <div class="start-features">
-          <span>🎧 Handcrafted Lofi Beats</span>
-          <span>🌌 Flying Sky Whales</span>
-          <span>🌸 Dynamic Sceneries</span>
-          <span>✨ No Score, No Rush</span>
+      <div class="start-card" role="dialog" aria-modal="true" aria-labelledby="start-heading">
+        <div class="start-eyebrow"><span class="eyebrow-mark">✳</span> SYNTHRACE <span class="eyebrow-divider"></span> NIGHT DRIVE NO. 01</div>
+        <div class="start-copy">
+          <p class="lofi-badge"><span class="live-dot"></span> YOUR PRIVATE NIGHT RADIO</p>
+          <h1 class="start-title" id="start-heading">Take the<br><em>long way</em><span class="title-period">.</span></h1>
+          <p class="start-subtitle">A quiet road, a softer soundtrack, and nowhere else you need to be.</p>
+          <div class="start-features">
+            <span><b>01</b> Endless highway</span>
+            <span><b>02</b> Handpicked lo-fi</span>
+            <span><b>03</b> Just you & the night</span>
+          </div>
+          <button class="start-button" id="start-btn" aria-label="Start your night drive">
+            <span class="start-btn-icon" aria-hidden="true">↗</span> Begin the drive
+          </button>
+          <p class="start-hint"><kbd>SPACE</kbd> or <kbd>ENTER</kbd> <span>·</span> best enjoyed with headphones</p>
         </div>
-        <button class="start-button" id="start-btn">
-          <span class="start-btn-icon">▶</span> START CRUISING
-        </button>
-        <p class="start-hint">Press [Space] or Tap to Begin</p>
+        <div class="start-art" aria-hidden="true">
+          <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+          <div class="art-moon"></div><div class="art-horizon"></div>
+          <div class="art-road"><i></i><i></i><i></i></div>
+          <div class="art-caption"><span>35° 41′ 22″ N</span><span>AFTER HOURS</span></div>
+        </div>
+        <div class="start-footer"><span>NO DESTINATION REQUIRED</span><span>EST. AFTER DARK <b>✦</b></span></div>
       </div>
     `;
     document.body.appendChild(this.startScreen);
@@ -118,10 +128,14 @@ export class UI {
     // 6. Pause & Settings Modal (Only pause option, volume & aesthetic settings)
     this.pauseModal = document.createElement('div');
     this.pauseModal.className = 'pause-modal hidden';
+    this.pauseModal.setAttribute('role', 'dialog');
+    this.pauseModal.setAttribute('aria-hidden', 'true');
+    this.pauseModal.setAttribute('aria-modal', 'true');
+    this.pauseModal.setAttribute('aria-labelledby', 'pause-heading');
     this.pauseModal.innerHTML = `
       <div class="pause-card">
         <div class="pause-header">
-          <h2>✦ CRUISING PAUSED ✦</h2>
+          <h2 id="pause-heading">✦ CRUISING PAUSED ✦</h2>
           <p>take a breath, chill out, adjust your vibe</p>
         </div>
 
@@ -172,7 +186,7 @@ export class UI {
               <button class="option-btn" data-weather="fireflies">🧚 Fireflies</button>
             </div>
             <div class="toggle-row" style="margin-top: 10px;">
-              <label>CRT Retro Scanlines</label>
+              <label>Cinematic vignette</label>
               <input type="checkbox" id="toggle-crt" checked />
             </div>
             <div class="toggle-row">
@@ -241,15 +255,19 @@ export class UI {
     // Start screen click
     const startBtn = document.getElementById('start-btn');
     const startHandler = () => {
+      if (this.hasStarted) return;
+      this.hasStarted = true;
       this.startScreen.classList.add('hidden');
+      this.startScreen.setAttribute('aria-hidden', 'true');
       this.soundManager.ensureUnlocked();
       this.soundManager.play();
-      this.showToast('🎧 Lo-fi Radio Connected · Smooth Cruising Ahead');
+      this.showToast('Radio connected · easy does it');
       window.removeEventListener('keydown', keyStartHandler);
     };
 
     const keyStartHandler = (e) => {
-      if (e.code === 'Space' || e.code === 'Enter') {
+      if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) {
+        e.preventDefault();
         startHandler();
       }
     };
@@ -391,13 +409,15 @@ export class UI {
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+      if (e.repeat || e.target.matches('input, textarea, select, [contenteditable="true"]')) return;
       if (e.code === 'KeyP' || e.code === 'Escape') {
         this.togglePause();
       } else if (e.code === 'Tab') {
         e.preventDefault();
         this.toggleAutoCruise();
       } else if (e.code === 'KeyC') {
-        this.cameraController.toggleMode();
+        const mode = this.cameraController.toggleMode();
+        this.showToast(`Camera · ${mode.toLowerCase()}`);
       } else if (e.code === 'KeyN') {
         this.soundManager.nextTrack(true);
       }
@@ -411,14 +431,20 @@ export class UI {
     const bindTouch = (id, prop) => {
       const btn = document.getElementById(id);
       if (!btn) return;
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.game.input[prop] = true;
-      });
-      btn.addEventListener('touchend', (e) => {
-        e.preventDefault();
+      const release = () => {
         this.game.input[prop] = false;
+        btn.classList.remove('is-pressed');
+      };
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        btn.setPointerCapture?.(e.pointerId);
+        this.game.input[prop] = true;
+        btn.classList.add('is-pressed');
       });
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('lostpointercapture', release);
+      window.addEventListener('blur', release);
     };
 
     bindTouch('m-gas', 'forward');
@@ -446,6 +472,7 @@ export class UI {
   togglePause() {
     this.isPaused = !this.isPaused;
     this.pauseModal.classList.toggle('hidden', !this.isPaused);
+    this.pauseModal.setAttribute('aria-hidden', String(!this.isPaused));
 
     if (this.isPaused) {
       this.showToast('Cruising Paused');
@@ -465,15 +492,20 @@ export class UI {
   }
 
   update(delta) {
-    // 1. Update Speedometer
-    const speed = this.useMph ? this.car.getSpeedMph() : this.car.getSpeedKmH();
+    // The scene renders every frame; text and spectrum only need a light 15 Hz UI tick.
+    this.hudTick += delta;
+    if (this.hudTick < 1 / 15) return;
+    this.hudTick %= 1 / 15;
+
+    // 1. Update Speedometer only when the displayed value changes.
+    const speed = String(this.useMph ? this.car.getSpeedMph() : this.car.getSpeedKmH());
     const speedEl = document.getElementById('hud-speed');
-    if (speedEl) speedEl.textContent = speed;
+    if (speedEl && speedEl.textContent !== speed) speedEl.textContent = speed;
 
     // 2. Update Distance
-    const distKm = (this.car.distanceTraveled / 1000).toFixed(1);
+    const distKm = `${(this.car.distanceTraveled / 1000).toFixed(1)} km`;
     const distEl = document.getElementById('hud-dist');
-    if (distEl) distEl.textContent = `${distKm} km`;
+    if (distEl && distEl.textContent !== distKm) distEl.textContent = distKm;
 
     // 3. Update Current Biome Badge
     const curBiome = this.biomes.getCurrentBiome();
@@ -495,12 +527,13 @@ export class UI {
     if (this.vizBars && this.soundManager.isPlaying) {
       const freqData = this.soundManager.getVisualizerData();
       if (freqData) {
-        for (let i = 0; i < 16; i++) {
-          const val = freqData[i] || 0;
-          const height = Math.max(3, (val / 255) * 22);
+        for (let i = 0; i < this.vizBars.length; i++) {
+          const height = Math.max(3, ((freqData[i] || 0) / 255) * 22);
           this.vizBars[i].style.height = `${height}px`;
         }
       }
+    } else if (this.vizBars) {
+      this.vizBars.forEach(bar => { bar.style.height = '3px'; });
     }
   }
 }

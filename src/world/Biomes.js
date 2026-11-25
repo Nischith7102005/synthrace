@@ -83,6 +83,7 @@ export class Biomes {
     }
 
     this.windowTex = new THREE.CanvasTexture(winCanvas);
+    this.windowTex.colorSpace = THREE.SRGBColorSpace;
     this.windowTex.wrapS = THREE.RepeatWrapping;
     this.windowTex.wrapT = THREE.RepeatWrapping;
     this.windowTex.repeat.set(2, 6);
@@ -137,13 +138,39 @@ export class Biomes {
     this.skyGroup = new THREE.Group();
     this.group.add(this.skyGroup);
 
-    // Giant Glowing Moon
-    const moonGeo = new THREE.CircleGeometry(48, 36);
+    // Textured lunar sphere: soft crater relief reads much better than a flat disc at distance.
+    const moonCanvas = document.createElement('canvas');
+    moonCanvas.width = 512;
+    moonCanvas.height = 256;
+    const moonCtx = moonCanvas.getContext('2d');
+    const moonGradient = moonCtx.createLinearGradient(0, 0, 0, moonCanvas.height);
+    moonGradient.addColorStop(0, '#d9d9ce');
+    moonGradient.addColorStop(0.5, '#c9cbbf');
+    moonGradient.addColorStop(1, '#a9b0aa');
+    moonCtx.fillStyle = moonGradient;
+    moonCtx.fillRect(0, 0, moonCanvas.width, moonCanvas.height);
+    for (let i = 0; i < 42; i++) {
+      const x = (i * 137.5 + 29) % moonCanvas.width;
+      const y = 22 + ((i * 73) % 210);
+      const radius = 4 + ((i * 19) % 16);
+      const crater = moonCtx.createRadialGradient(x - radius * 0.28, y - radius * 0.28, 1, x, y, radius);
+      crater.addColorStop(0, 'rgba(246, 245, 229, 0.42)');
+      crater.addColorStop(0.56, 'rgba(189, 194, 185, 0.22)');
+      crater.addColorStop(1, 'rgba(89, 101, 99, 0.18)');
+      moonCtx.fillStyle = crater;
+      moonCtx.beginPath();
+      moonCtx.arc(x, y, radius, 0, Math.PI * 2);
+      moonCtx.fill();
+    }
+    const moonTexture = new THREE.CanvasTexture(moonCanvas);
+    moonTexture.colorSpace = THREE.SRGBColorSpace;
     this.moonMat = new THREE.MeshBasicMaterial({
-      color: 0xf472b6,
+      map: moonTexture,
+      color: 0xf0eee0,
       transparent: true,
-      opacity: 0.95
+      opacity: 0.96
     });
+    const moonGeo = new THREE.SphereGeometry(48, 48, 32);
     this.moonMesh = new THREE.Mesh(moonGeo, this.moonMat);
     this.moonMesh.position.set(120, 150, -850);
     this.skyGroup.add(this.moonMesh);
@@ -161,6 +188,7 @@ export class Biomes {
     hctx.fillRect(0, 0, 256, 256);
 
     const haloTex = new THREE.CanvasTexture(haloCanvas);
+    haloTex.colorSpace = THREE.SRGBColorSpace;
     const haloGeo = new THREE.PlaneGeometry(160, 160);
     const haloMat = new THREE.MeshBasicMaterial({
       map: haloTex,
@@ -587,6 +615,12 @@ export class Biomes {
     if (this.moonMat) {
       this.moonMat.color.setHex(b.moon);
     }
+    const skyUniforms = this.scene.userData?.skyDome?.material?.uniforms;
+    if (skyUniforms) {
+      skyUniforms.zenith.value.setHex(b.fog).multiplyScalar(0.44);
+      skyUniforms.midSky.value.setHex(b.fog).lerp(new THREE.Color(b.ambient), 0.32);
+      skyUniforms.horizon.value.setHex(b.fog).lerp(new THREE.Color(b.light), 0.2);
+    }
 
     this.updateLayerVisibilities(index, index, 1.0);
   }
@@ -642,6 +676,12 @@ export class Biomes {
 
       if (this.scene.fog) this.scene.fog.color.copy(this.blendedFogColor);
       if (this.scene.background) this.scene.background.copy(this.blendedFogColor);
+      const skyUniforms = this.scene.userData?.skyDome?.material?.uniforms;
+      if (skyUniforms) {
+        skyUniforms.zenith.value.copy(this.blendedFogColor).multiplyScalar(0.44);
+        skyUniforms.midSky.value.copy(this.blendedFogColor).lerp(this.tempColor2.setHex(toB.ambient), 0.32);
+        skyUniforms.horizon.value.copy(this.blendedFogColor).lerp(this.tempColor1.setHex(toB.light), 0.2);
+      }
 
       this.tempColor1.setHex(fromB.moon);
       this.tempColor2.setHex(toB.moon);

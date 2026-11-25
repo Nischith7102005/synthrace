@@ -44,11 +44,59 @@ export class RoadSystem {
   }
 
   initMaterials() {
-    // Wet asphalt with subtle specular sheen
+    // A deterministic fine-grain surface keeps the road from reading as a flat black plane.
+    const asphaltSize = 256;
+    const asphaltPixels = new Uint8Array(asphaltSize * asphaltSize * 4);
+    const roughnessPixels = new Uint8Array(asphaltSize * asphaltSize * 4);
+    let seed = 739391;
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+    for (let y = 0; y < asphaltSize; y++) {
+      const longWetStreak = random() > 0.965 ? 8 : 0;
+      for (let x = 0; x < asphaltSize; x++) {
+        const i = (y * asphaltSize + x) * 4;
+        const grain = (random() - 0.5) * 17;
+        const fleck = random() > 0.994 ? 14 : 0;
+        const value = Math.max(14, Math.min(74, 37 + grain + fleck - longWetStreak));
+        asphaltPixels[i] = value * 0.9;
+        asphaltPixels[i + 1] = value;
+        asphaltPixels[i + 2] = value * 1.12;
+        asphaltPixels[i + 3] = 255;
+        const roughness = longWetStreak ? 112 : 188 + grain * 2;
+        roughnessPixels[i] = roughnessPixels[i + 1] = roughnessPixels[i + 2] = roughness;
+        roughnessPixels[i + 3] = 255;
+      }
+    }
+    const asphaltTexture = new THREE.DataTexture(asphaltPixels, asphaltSize, asphaltSize, THREE.RGBAFormat);
+    asphaltTexture.wrapS = THREE.RepeatWrapping;
+    asphaltTexture.wrapT = THREE.RepeatWrapping;
+    asphaltTexture.repeat.set(1.5, 4);
+    asphaltTexture.colorSpace = THREE.SRGBColorSpace;
+    asphaltTexture.generateMipmaps = true;
+    asphaltTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    asphaltTexture.magFilter = THREE.LinearFilter;
+    asphaltTexture.needsUpdate = true;
+
+    const roughnessTexture = new THREE.DataTexture(roughnessPixels, asphaltSize, asphaltSize, THREE.RGBAFormat);
+    roughnessTexture.wrapS = THREE.RepeatWrapping;
+    roughnessTexture.wrapT = THREE.RepeatWrapping;
+    roughnessTexture.repeat.copy(asphaltTexture.repeat);
+    roughnessTexture.generateMipmaps = true;
+    roughnessTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    roughnessTexture.magFilter = THREE.LinearFilter;
+    roughnessTexture.needsUpdate = true;
+
+    // Wet asphalt with subtle, irregular specular sheen and micro texture.
     this.asphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x11131a,
-      roughness: 0.35,
-      metalness: 0.15,
+      color: 0xffffff,
+      map: asphaltTexture,
+      roughnessMap: roughnessTexture,
+      bumpMap: roughnessTexture,
+      bumpScale: 0.018,
+      roughness: 0.31,
+      metalness: 0.22,
       flatShading: false
     });
 
@@ -67,14 +115,17 @@ export class RoadSystem {
     });
 
     this.neonStripMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8
+      color: 0x8de3d0,
+      transparent: true,
+      opacity: 0.52,
+      toneMapped: false
     });
 
     // Lane markings
     this.dashedLineMat = new THREE.MeshBasicMaterial({
-      color: 0xf8fafc,
+      color: 0xc8d4d3,
       transparent: true,
-      opacity: 0.9
+      opacity: 0.72
     });
 
     this.solidLineMat = new THREE.MeshBasicMaterial({
@@ -112,6 +163,7 @@ export class RoadSystem {
     this.signCanvas.height = 128;
     this.renderSignTexture('LO-FI EXPWY · 渋谷 SHIBUYA 5km');
     this.signTexture = new THREE.CanvasTexture(this.signCanvas);
+    this.signTexture.colorSpace = THREE.SRGBColorSpace;
 
     this.signMat = new THREE.MeshBasicMaterial({
       map: this.signTexture
@@ -269,6 +321,13 @@ export class RoadSystem {
       lampGeo.translate(3.2, 9.85, 0);
       const lamp = new THREE.Mesh(lampGeo, this.lampHeadMat);
       lightGroup.add(lamp);
+
+      // Sparse practical light sources make the wet asphalt catch soft pools of warm light.
+      if (i % 3 === 0) {
+        const spill = new THREE.PointLight(0xffd5a1, 42, 78, 2);
+        spill.position.set(3.1, 9.35, 0);
+        lightGroup.add(spill);
+      }
 
       // Alternate left and right side of highway
       const side = (i % 2 === 0) ? -1 : 1;

@@ -8,6 +8,8 @@ export class CameraController {
 
     this.currentPos = new THREE.Vector3(0, 5, 10);
     this.currentTarget = new THREE.Vector3(0, 1.5, -20);
+    this.targetPos = new THREE.Vector3();
+    this.lookTarget = new THREE.Vector3();
     this.droneAngle = 0;
   }
 
@@ -27,8 +29,8 @@ export class CameraController {
     const carRot = car.group.rotation.y;
     const speed = car.speed;
 
-    const targetPos = new THREE.Vector3();
-    const lookTarget = new THREE.Vector3();
+    const targetPos = this.targetPos;
+    const lookTarget = this.lookTarget;
 
     if (this.mode === 'chase') {
       // Third-person chase with speed-dependent dynamic pull back
@@ -46,8 +48,8 @@ export class CameraController {
       lookTarget.z = carPos.z - Math.cos(carRot) * lookDist;
 
       // Smooth lerp for buttery lag-free spring camera
-      this.currentPos.lerp(targetPos, Math.min(1.0, delta * 7.5));
-      this.currentTarget.lerp(lookTarget, Math.min(1.0, delta * 9.0));
+      this.currentPos.lerp(targetPos, 1 - Math.exp(-delta * 7.5));
+      this.currentTarget.lerp(lookTarget, 1 - Math.exp(-delta * 9.0));
 
     } else if (this.mode === 'hood') {
       // First-person hood / windshield view
@@ -60,8 +62,8 @@ export class CameraController {
       lookTarget.y = carPos.y + 1.35;
       lookTarget.z = carPos.z - Math.cos(carRot) * lookDist;
 
-      this.currentPos.lerp(targetPos, Math.min(1.0, delta * 18.0));
-      this.currentTarget.lerp(lookTarget, Math.min(1.0, delta * 18.0));
+      this.currentPos.lerp(targetPos, 1 - Math.exp(-delta * 18.0));
+      this.currentTarget.lerp(lookTarget, 1 - Math.exp(-delta * 18.0));
 
     } else if (this.mode === 'drone') {
       // Cinematic slow sweeping orbit around car
@@ -77,8 +79,16 @@ export class CameraController {
       lookTarget.y = carPos.y + 1.2;
       lookTarget.z = carPos.z;
 
-      this.currentPos.lerp(targetPos, Math.min(1.0, delta * 4.0));
-      this.currentTarget.lerp(lookTarget, Math.min(1.0, delta * 5.0));
+      this.currentPos.lerp(targetPos, 1 - Math.exp(-delta * 4.0));
+      this.currentTarget.lerp(lookTarget, 1 - Math.exp(-delta * 5.0));
+    }
+
+    const speedRatio = Math.min(1, Math.max(0, speed / car.maxSpeed));
+    const targetFov = this.mode === 'hood' ? 56 : 58 + speedRatio * 2.2;
+    const nextFov = THREE.MathUtils.damp(this.camera.fov, targetFov, 2.2, delta);
+    if (Math.abs(nextFov - this.camera.fov) > 0.015) {
+      this.camera.fov = nextFov;
+      this.camera.updateProjectionMatrix();
     }
 
     this.camera.position.copy(this.currentPos);

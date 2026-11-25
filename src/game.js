@@ -20,7 +20,7 @@ export class Game {
       antialias: true
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -28,12 +28,15 @@ export class Game {
 
     // 2. Setup Scene & Atmospheric Fog
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x110f24);
-    this.scene.fog = new THREE.FogExp2(0x110f24, 0.0028);
+    this.scene.background = new THREE.Color(0x080d15);
+    this.scene.fog = new THREE.FogExp2(0x101820, 0.0024);
+    this.skyDome = this.createSkyDome();
+    this.scene.add(this.skyDome);
+    this.scene.userData.skyDome = this.skyDome;
 
     // 3. Setup Camera
     this.camera = new THREE.PerspectiveCamera(
-      62,
+      58,
       window.innerWidth / window.innerHeight,
       0.2,
       1400
@@ -73,18 +76,56 @@ export class Game {
     requestAnimationFrame(this.animate);
   }
 
+  createSkyDome() {
+    const geometry = new THREE.SphereGeometry(1200, 32, 20);
+    const material = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: {
+        zenith: { value: new THREE.Color(0x080d18) },
+        midSky: { value: new THREE.Color(0x142630) },
+        horizon: { value: new THREE.Color(0x283b3d) }
+      },
+      vertexShader: `
+        varying vec3 vSkyDirection;
+        void main() {
+          vSkyDirection = normalize(position);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vSkyDirection;
+        uniform vec3 zenith;
+        uniform vec3 midSky;
+        uniform vec3 horizon;
+        void main() {
+          float h = clamp(vSkyDirection.y * 0.5 + 0.5, 0.0, 1.0);
+          vec3 sky = mix(horizon, midSky, smoothstep(0.02, 0.46, h));
+          sky = mix(sky, zenith, smoothstep(0.34, 0.96, h));
+          float haze = 1.0 - smoothstep(0.02, 0.24, abs(h - 0.5));
+          sky += vec3(0.018, 0.027, 0.028) * haze;
+          gl_FragColor = vec4(sky, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }
+      `
+    });
+    const dome = new THREE.Mesh(geometry, material);
+    dome.renderOrder = -1000;
+    dome.frustumCulled = false;
+    return dome;
+  }
+
   setupLighting() {
-    // Soft Ambient Night Fill
-    this.ambientLight = new THREE.AmbientLight(0x2e1065, 0.85);
+    // Cool moon fill with restrained warm practicals along the road.
+    this.ambientLight = new THREE.AmbientLight(0x8593aa, 0.46);
     this.scene.add(this.ambientLight);
 
-    // Moonlight Directional
-    this.moonLight = new THREE.DirectionalLight(0xa855f7, 1.4);
+    this.moonLight = new THREE.DirectionalLight(0xa9bed3, 1.05);
     this.moonLight.position.set(60, 100, -80);
     this.scene.add(this.moonLight);
 
-    // Warm Cyan Horizon Fill
-    this.horizonLight = new THREE.HemisphereLight(0x38bdf8, 0x090a10, 0.6);
+    this.horizonLight = new THREE.HemisphereLight(0x7e9aaa, 0x10151a, 0.58);
     this.scene.add(this.horizonLight);
   }
 
@@ -148,7 +189,7 @@ export class Game {
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(width, height);
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     });
   }
 
@@ -189,6 +230,9 @@ export class Game {
 
     // UI HUD & Visualizer updates
     this.ui.update(delta);
+
+    // Keep the gradient sky centered on the lens so the dome never exposes an edge.
+    this.skyDome.position.copy(this.camera.position);
 
     // Render 3D Scene
     this.renderer.render(this.scene, this.camera);

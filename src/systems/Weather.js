@@ -16,31 +16,35 @@ export class Weather {
   initRain() {
     this.rainCount = 600;
     const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(this.rainCount * 3);
+    const positions = new Float32Array(this.rainCount * 6);
     const velocities = [];
 
     for (let i = 0; i < this.rainCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 80;
-      positions[i * 3 + 1] = Math.random() * 40;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 120;
+      const x = (Math.random() - 0.5) * 80;
+      const y = Math.random() * 40;
+      const z = (Math.random() - 0.5) * 120;
+      const offset = i * 6;
+      positions[offset] = x;
+      positions[offset + 1] = y;
+      positions[offset + 2] = z;
+      positions[offset + 3] = x - 0.42;
+      positions[offset + 4] = y - 1.7;
+      positions[offset + 5] = z;
 
-      velocities.push({
-        y: -35 - Math.random() * 20,
-        x: -2 - Math.random() * 2
-      });
+      velocities.push({ y: -35 - Math.random() * 20, x: -2 - Math.random() * 2 });
     }
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-    this.rainMat = new THREE.PointsMaterial({
-      color: 0x93c5fd,
-      size: 0.9,
+    this.rainMat = new THREE.LineBasicMaterial({
+      color: 0xb9d5df,
       transparent: true,
-      opacity: 0.55,
-      blending: THREE.AdditiveBlending
+      opacity: 0.34,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
     });
 
-    this.rainPoints = new THREE.Points(geo, this.rainMat);
+    this.rainPoints = new THREE.LineSegments(geo, this.rainMat);
     this.rainPoints.userData = { velocities };
     this.group.add(this.rainPoints);
   }
@@ -66,6 +70,8 @@ export class Weather {
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    this.fireflyHomes = positions.slice();
+    this.fireflyPhases = Float32Array.from({ length: this.fireflyCount }, () => Math.random() * Math.PI * 2);
 
     this.fireflyMat = new THREE.PointsMaterial({
       size: 2.2,
@@ -91,7 +97,7 @@ export class Weather {
     const time = performance.now() * 0.001;
 
     // Follow player car
-    this.group.position.set(pPos.x, 0, pPos.z);
+    this.group.position.copy(pPos);
 
     // Update Rain
     if (this.rainPoints.visible) {
@@ -99,14 +105,24 @@ export class Weather {
       const vels = this.rainPoints.userData.velocities;
 
       for (let i = 0; i < this.rainCount; i++) {
-        pos[i * 3 + 1] += vels[i].y * delta;
-        pos[i * 3] += vels[i].x * delta;
+        const offset = i * 6;
+        const { x, y } = vels[i];
+        pos[offset] += x * delta;
+        pos[offset + 1] += y * delta;
+        pos[offset + 3] += x * delta;
+        pos[offset + 4] += y * delta;
 
-        // Reset if hit ground or out of view
-        if (pos[i * 3 + 1] < 0) {
-          pos[i * 3 + 1] = 35 + Math.random() * 10;
-          pos[i * 3] = (Math.random() - 0.5) * 80;
-          pos[i * 3 + 2] = (Math.random() - 0.5) * 120;
+        // Recycle a whole streak together so its length and angle stay consistent.
+        if (pos[offset + 4] < 0) {
+          const startX = (Math.random() - 0.5) * 80;
+          const startY = 35 + Math.random() * 10;
+          const startZ = (Math.random() - 0.5) * 120;
+          pos[offset] = startX;
+          pos[offset + 1] = startY;
+          pos[offset + 2] = startZ;
+          pos[offset + 3] = startX - 0.42;
+          pos[offset + 4] = startY - 1.7;
+          pos[offset + 5] = startZ;
         }
       }
       this.rainPoints.geometry.attributes.position.needsUpdate = true;
@@ -116,11 +132,11 @@ export class Weather {
     if (this.fireflyPoints.visible) {
       const pos = this.fireflyPoints.geometry.attributes.position.array;
       for (let i = 0; i < this.fireflyCount; i++) {
-        pos[i * 3] += Math.sin(time * 1.5 + i) * 0.04;
-        pos[i * 3 + 1] += Math.cos(time * 2.0 + i) * 0.02;
-
-        if (pos[i * 3 + 1] < 0.2) pos[i * 3 + 1] = 0.5;
-        if (pos[i * 3 + 1] > 9.0) pos[i * 3 + 1] = 8.5;
+        const offset = i * 3;
+        const phase = this.fireflyPhases[i];
+        pos[offset] = this.fireflyHomes[offset] + Math.sin(time * 0.38 + phase) * 0.55;
+        pos[offset + 1] = this.fireflyHomes[offset + 1] + Math.cos(time * 0.52 + phase) * 0.34;
+        pos[offset + 2] = this.fireflyHomes[offset + 2] + Math.sin(time * 0.24 + phase) * 0.3;
       }
       this.fireflyPoints.geometry.attributes.position.needsUpdate = true;
     }
